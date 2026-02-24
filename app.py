@@ -8,19 +8,12 @@ from src.embeddings.embedder import LocalEmbedder
 from src.vectorstore.faiss_store import FAISSVectorStore
 from src.rag.pipeline import RAGPipeline
 
-
-# -----------------------------
-# Page Config (Mobile-first)
-# -----------------------------
 st.set_page_config(
-    page_title="AI Knowledge Assistant",
-    page_icon="🤖",
+    page_title="Cogni",
+    page_icon="src/assets/icon2.png",
     layout="centered"
 )
 
-# -----------------------------
-# Minimal Perplexity-style CSS
-# -----------------------------
 st.markdown(
     """
     <style>
@@ -34,9 +27,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# -----------------------------
-# Header
-# -----------------------------
 st.markdown(
     """
     # 🤖 AI Knowledge Assistant
@@ -44,9 +34,6 @@ st.markdown(
     """
 )
 
-# -----------------------------
-# Sidebar (Minimal Controls)
-# -----------------------------
 with st.sidebar:
     st.markdown("### 📄 Document")
     uploaded_file = st.file_uploader(
@@ -65,15 +52,12 @@ with st.sidebar:
 
     if st.button("🧹 Clear conversation"):
         st.session_state.messages = []
-        st.experimental_rerun()
+        st.rerun()
 
     st.divider()
     st.caption("RAG • FAISS • Gemini")
 
 
-# -----------------------------
-# Knowledge Base Builders
-# -----------------------------
 @st.cache_resource(show_spinner=False)
 def load_default_knowledge_base():
     faq_docs = TextFAQLoader("data/faqs/personal_faqs.json").load()
@@ -118,9 +102,6 @@ def build_vector_store_from_uploaded_pdf(file_bytes):
     return store, embedder
 
 
-# -----------------------------
-# Select Knowledge Source
-# -----------------------------
 if uploaded_file:
     vector_store, embedder = build_vector_store_from_uploaded_pdf(
         uploaded_file.read()
@@ -131,15 +112,10 @@ else:
 
 rag = RAGPipeline()
 
-
-# -----------------------------
-# Chat State
-# -----------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-# Empty-state guidance (Perplexity-like)
 if not st.session_state.messages:
     st.info(
         "Try asking:\n"
@@ -147,37 +123,29 @@ if not st.session_state.messages:
     )
 
 
-# Render chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 
-# -----------------------------
-# Chat Input
-# -----------------------------
 user_query = st.chat_input("Ask a question")
 
 if user_query:
-    # User message
     st.session_state.messages.append(
         {"role": "user", "content": user_query}
     )
     with st.chat_message("user"):
         st.markdown(user_query)
 
-    # Retrieval
     query_embedding = embedder.embed_query(user_query)
     retrieved_docs = vector_store.search(query_embedding, top_k=7)
 
-    # Answer generation with subtle feedback
     with st.chat_message("assistant"):
         with st.spinner("Thinking…"):
             answer = rag.generate_answer(user_query, retrieved_docs)
 
         st.markdown(answer)
 
-        # ---- Sources (Perplexity-style) ----
         sources = set()
         for doc in retrieved_docs:
             meta = doc["metadata"]
@@ -194,12 +162,3 @@ if user_query:
     st.session_state.messages.append(
         {"role": "assistant", "content": answer}
     )
-
-
-# -----------------------------
-# Footer
-# -----------------------------
-st.divider()
-st.caption(
-    "Source-grounded answers • Minimal UI • Mobile-friendly"
-)
