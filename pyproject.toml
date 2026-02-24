@@ -1,7 +1,7 @@
 [project]
 name = "final-project"
 version = "0.1.0"
-description = "Add your description here"
+description = "Built a multi-source AI assistant that answers user queries over personal FAQs and PDF documents using Retrieval-Augmented Generation (RAG). Implemented document ingestion, text normalization, chunking, semantic search with FAISS, and grounded answer generation using Gemini LLM. Deployed with an interactive Streamlit chat interface."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
