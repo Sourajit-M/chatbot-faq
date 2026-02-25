@@ -8,19 +8,26 @@ from src.embeddings.embedder import LocalEmbedder
 from src.vectorstore.faiss_store import FAISSVectorStore
 from src.rag.pipeline import RAGPipeline
 
+
 st.set_page_config(
-    page_title="Cogni",
+    page_title="Cogni AI",
     page_icon="src/assets/icon2.png",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
+
 
 st.markdown(
     """
     <style>
     .block-container {
-        max-width: 760px;
+        max-width: 720px;
         padding-top: 2rem;
         padding-bottom: 2rem;
+    }
+    h1 {
+        font-weight: 600;
+        letter-spacing: -0.02em;
     }
     </style>
     """,
@@ -28,34 +35,24 @@ st.markdown(
 )
 
 st.markdown(
-    """
-    # 🤖 AI Knowledge Assistant
-    Ask questions and get **source-grounded answers** from your documents.
-    """
+    f"""
+    <div style="display:flex; align-items:center;">
+        <img src="https://i.pinimg.com/1200x/b6/f1/58/b6f1587080522a1bb687a63069520f63.jpg" width="50" style="margin-right:10px; border-radius:50%;">
+        <h1 style="margin:0;">AI Knowledge Assistant</h1>
+    </div>
+    <p>Ask questions about your documents</p>
+    """,
+    unsafe_allow_html=True
 )
 
-with st.sidebar:
-    st.markdown("### 📄 Document")
-    uploaded_file = st.file_uploader(
-        "Upload a PDF",
-        type=["pdf"],
-        label_visibility="collapsed"
-    )
+uploaded_file = st.file_uploader(
+    "Upload a PDF",
+    type=["pdf"],
+    label_visibility="collapsed"
+)
 
-    if uploaded_file:
-        st.success("PDF ready")
-        st.caption(uploaded_file.name)
-    else:
-        st.caption("Using default knowledge base")
-
-    st.divider()
-
-    if st.button("🧹 Clear conversation"):
-        st.session_state.messages = []
-        st.rerun()
-
-    st.divider()
-    st.caption("RAG • FAISS • Gemini")
+if uploaded_file:
+    st.success("PDF indexed and ready")
 
 
 @st.cache_resource(show_spinner=False)
@@ -68,7 +65,7 @@ def load_default_knowledge_base():
     for doc in docs:
         doc["content"] = normalize_text(doc["content"])
 
-    chunked_docs = chunk_documents(docs)
+    chunked_docs = chunk_documents(docs, chunk_size=700, overlap=150)
 
     embedder = LocalEmbedder()
     embeddings = embedder.embed_texts([d["content"] for d in chunked_docs])
@@ -91,7 +88,7 @@ def build_vector_store_from_uploaded_pdf(file_bytes):
     for doc in pdf_docs:
         doc["content"] = normalize_text(doc["content"])
 
-    chunked_docs = chunk_documents(pdf_docs)
+    chunked_docs = chunk_documents(pdf_docs, chunk_size=700, overlap=150)
 
     embedder = LocalEmbedder()
     embeddings = embedder.embed_texts([d["content"] for d in chunked_docs])
@@ -106,18 +103,18 @@ if uploaded_file:
     vector_store, embedder = build_vector_store_from_uploaded_pdf(
         uploaded_file.read()
     )
-    st.success("Document indexed. Ask anything.")
 else:
     vector_store, embedder = load_default_knowledge_base()
 
 rag = RAGPipeline()
+
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
 if not st.session_state.messages:
-    st.info(
+    st.caption(
         "Try asking:\n"
         "- *Summarize this document*\n"
     )
@@ -131,6 +128,7 @@ for msg in st.session_state.messages:
 user_query = st.chat_input("Ask a question")
 
 if user_query:
+    # User message
     st.session_state.messages.append(
         {"role": "user", "content": user_query}
     )
@@ -140,24 +138,15 @@ if user_query:
     query_embedding = embedder.embed_query(user_query)
     retrieved_docs = vector_store.search(query_embedding, top_k=7)
 
+    # Answer
     with st.chat_message("assistant"):
-        with st.spinner("Thinking…"):
+        with st.spinner("Thinking..."):
             answer = rag.generate_answer(user_query, retrieved_docs)
 
-        st.markdown(answer)
-
-        sources = set()
-        for doc in retrieved_docs:
-            meta = doc["metadata"]
-            if meta["source"] == "pdf":
-                sources.add(f"{meta['file_name']} — page {meta['page']}")
-            else:
-                sources.add(f"FAQ ID {meta['id']}")
-
-        if sources:
-            with st.expander("Sources"):
-                for s in sorted(sources):
-                    st.markdown(f"- `{s}`")
+        st.markdown(
+            f"<div style='line-height:1.6'>{answer}</div>",
+            unsafe_allow_html=True
+        )
 
     st.session_state.messages.append(
         {"role": "assistant", "content": answer}

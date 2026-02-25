@@ -30,8 +30,9 @@ Rules:
 - You may infer information if it is clearly implied across multiple sources
 - Do NOT add any external or general knowledge
 - If the answer is truly missing, say exactly:
-  "I don't know based on the provided documents."
+"I don't know based on the provided documents."
 - Be concise, factual, and clear
+- Use clear reading formatting (paragraphs, bullet points) if it helps clarity
 
 Context:
 {context_text}
